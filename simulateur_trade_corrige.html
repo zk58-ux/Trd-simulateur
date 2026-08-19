@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulateur de Trade — Corrigé</title>
+<style>
+  :root{
+    --bg:#0d0d14; --panel:#171725; --panel2:#202039; --text:#f3f3f7;
+    --muted:#9d9db0; --purple:#7667ff; --green:#19c37d; --red:#ff5265;
+    --border:#302f50; --warn:#5a4815;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;padding:18px}
+  .wrap{max-width:900px;margin:auto}
+  h1{font-size:25px;margin:0 0 5px}
+  .subtitle{color:var(--muted);margin:0 0 22px}
+  .section-title{font-size:12px;color:#aaa9bc;font-weight:700;letter-spacing:.08em;margin:18px 0 9px}
+  .asset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  button{font:inherit}
+  .asset{
+    border:1px solid var(--border);background:var(--panel2);color:#b9b8ca;
+    border-radius:10px;padding:12px 7px;font-weight:700;cursor:pointer
+  }
+  .asset.active{border-color:var(--purple);color:var(--purple);box-shadow:0 0 0 1px var(--purple) inset}
+  .info{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:9px;color:#bdbbd0}
+  .info b{color:var(--purple)}
+  .direction{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .dir{padding:14px;border-radius:10px;border:2px solid var(--red);background:transparent;color:#ff6878;font-weight:800;cursor:pointer}
+  .dir.buy{border-color:var(--green);color:#111;background:var(--green)}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  label{display:block;font-size:12px;color:#aaa9bc;font-weight:700;margin-bottom:7px}
+  input{
+    width:100%;border:1px solid var(--border);background:var(--panel2);color:white;
+    border-radius:9px;padding:13px;font-size:16px;outline:none
+  }
+  input:focus{border-color:var(--purple)}
+  .balance-box{border:1px solid #3b385d;background:#19182b;padding:14px;border-radius:10px}
+  .hint{font-size:12px;color:var(--muted);margin-top:7px}
+  .warning{display:none;background:#33290f;border:1px solid #6e581b;color:#e8ca67;border-radius:10px;padding:12px;margin-top:12px;font-size:14px}
+  .results{margin-top:16px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .result-head{background:#10362e;padding:14px;font-weight:800;color:#36d59a}
+  .result-grid{display:grid;grid-template-columns:1fr 1fr}
+  .result{padding:22px 15px;text-align:center;border-top:1px solid var(--border)}
+  .result+ .result{border-left:1px solid var(--border)}
+  .result .label{font-size:12px;color:#aaa9bc;font-weight:800}
+  .value{font-size:28px;font-weight:900;margin:9px 0 4px}
+  .green{color:var(--green)} .red{color:var(--red)}
+  .points{font-size:13px;color:#9c9caf}
+  .stats{border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr)}
+  .stat{padding:15px;border-right:1px solid var(--border)}
+  .stat:last-child{border-right:0}
+  .stat-title{font-size:12px;color:#aaa9bc}
+  .stat-value{font-size:19px;font-weight:800;margin-top:5px}
+  .formula{margin-top:15px;background:#12121d;border:1px solid var(--border);padding:13px;border-radius:10px;color:#aaa9bc;font-size:13px;line-height:1.6}
+  .note{margin-top:15px;color:#8f8fa2;font-size:12px;line-height:1.5}
+  @media(max-width:650px){
+    body{padding:12px}.asset-grid{grid-template-columns:repeat(2,1fr)}
+    .fields,.result-grid,.stats{grid-template-columns:1fr}
+    .result+.result{border-left:0}
+    .stat{border-right:0;border-bottom:1px solid var(--border)}
+    .stat:last-child{border-bottom:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 Simulateur de Trade</h1>
+  <p class="subtitle">Entre tes données — calcul corrigé pour les indices Deriv sélectionnés.</p>
+
+  <div class="section-title">ACTIF</div>
+  <div class="asset-grid">
+    <button class="asset active" data-asset="Boom 1000">Boom 1000</button>
+    <button class="asset" data-asset="Boom 500">Boom 500</button>
+    <button class="asset" data-asset="Crash 1000">Crash 1000</button>
+    <button class="asset" data-asset="Crash 500">Crash 500</button>
+    <button class="asset" data-asset="Vol. 75">Vol. 75</button>
+    <button class="asset" data-asset="Vol. 100">Vol. 100</button>
+  </div>
+
+  <div class="info">
+    <b id="assetName">Boom 1000</b> — Taille du contrat : <b>1 USD par lot</b>.
+    Le calcul du P/L utilise directement la variation du prix × volume × taille du contrat.
+  </div>
+
+  <div class="section-title">DIRECTION</div>
+  <div class="direction">
+    <button id="buyBtn" class="dir buy">📈 BUY</button>
+    <button id="sellBtn" class="dir">📉 SELL</button>
+  </div>
+
+  <div class="fields" style="margin-top:14px">
+    <div>
+      <label for="entry">PRIX D'ENTRÉE</label>
+      <input id="entry" type="number" step="any" value="15210.7057">
+    </div>
+    <div>
+      <label for="volume">VOLUME (LOTS)</label>
+      <input id="volume" type="number" step="0.01" min="0" value="80">
+    </div>
+    <div>
+      <label for="sl">STOP LOSS</label>
+      <input id="sl" type="number" step="any" value="15207.9037">
+    </div>
+    <div>
+      <label for="tp">TAKE PROFIT</label>
+      <input id="tp" type="number" step="any" value="15213.4407">
+    </div>
+  </div>
+
+  <div class="section-title">SOLDE DU COMPTE</div>
+  <div class="balance-box">
+    <label for="balance">SOLDE ACTUEL (USD)</label>
+    <input id="balance" type="number" step="0.01" min="0" placeholder="Ex. 1000">
+    <div class="hint">Permet de calculer le pourcentage du solde risqué si le Stop Loss est touché.</div>
+  </div>
+
+  <div id="warning" class="warning"></div>
+
+  <div class="results">
+    <div class="result-head" id="resultTitle">📈 BUY — Boom 1000</div>
+    <div class="result-grid">
+      <div class="result">
+        <div class="label">❌ SI STOP LOSS TOUCHÉ</div>
+        <div class="value red" id="slLoss">−224.1600 USD</div>
+        <div class="points" id="slMove">2.8020 de mouvement</div>
+      </div>
+      <div class="result">
+        <div class="label">✅ SI TAKE PROFIT TOUCHÉ</div>
+        <div class="value green" id="tpGain">+218.8000 USD</div>
+        <div class="points" id="tpMove">2.7350 de mouvement</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-title">Ratio Risque / Récompense</div>
+        <div class="stat-value" id="rr">1 : 0.98</div>
+      </div>
+      <div class="stat">
+        <div class="stat-title">Risque du solde</div>
+        <div class="stat-value red" id="riskPct">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-title">Solde après SL</div>
+        <div class="stat-value" id="afterBalance">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula">
+    <b>Calcul :</b> perte/gain = |prix d'entrée − prix de sortie| × volume × taille du contrat.<br>
+    Pour le pourcentage : risque % = perte au SL ÷ solde actuel × 100.
+  </div>
+
+  <div class="note">
+    Les valeurs affichées sont une estimation théorique au niveau exact du SL/TP.
+    Le résultat réel peut différer légèrement selon le prix d'exécution, le spread et les conditions d'exécution.
+    Les spécifications Deriv indiquent une taille de contrat de 1 USD pour le Boom 1000.
+  </div>
+</div>
+
+<script>
+const contractSize = 1; // USD par lot pour les indices sélectionnés
+let direction = "BUY";
+let asset = "Boom 1000";
+
+const $ = id => document.getElementById(id);
+const money = n => (n < 0 ? "−" : n > 0 ? "+" : "") +
+  Math.abs(n).toLocaleString("fr-FR",{minimumFractionDigits:4,maximumFractionDigits:4}) + " USD";
+const money2 = n => n.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}) + " USD";
+const num = id => parseFloat($(id).value);
+
+function calculate(){
+  const entry=num("entry"), volume=num("volume"), sl=num("sl"), tp=num("tp"), balance=num("balance");
+  if (![entry,volume,sl,tp].every(Number.isFinite) || volume < 0) return;
+
+  // Direction-aware distances.
+  const slDistance = direction === "BUY" ? entry - sl : sl - entry;
+  const tpDistance = direction === "BUY" ? tp - entry : entry - tp;
+
+  const slLoss = Math.max(0, slDistance) * volume * contractSize;
+  const tpGain = Math.max(0, tpDistance) * volume * contractSize;
+
+  $("slLoss").textContent = money(-slLoss);
+  $("tpGain").textContent = money(tpGain);
+  $("slMove").textContent = Math.abs(slDistance).toFixed(4) + " de mouvement";
+  $("tpMove").textContent = Math.abs(tpDistance).toFixed(4) + " de mouvement";
+
+  const rr = slLoss > 0 ? tpGain / slLoss : 0;
+  $("rr").textContent = "1 : " + rr.toFixed(2);
+
+  if (Number.isFinite(balance) && balance > 0) {
+    const pct = slLoss / balance * 100;
+    $("riskPct").textContent = pct.toFixed(2) + " %";
+    $("afterBalance").textContent = money2(balance - slLoss);
+  } else {
+    $("riskPct").textContent = "—";
+    $("afterBalance").textContent = "—";
+  }
+
+  $("resultTitle").textContent = (direction === "BUY" ? "📈 BUY — " : "📉 SELL — ") + asset;
+
+  const warning=$("warning");
+  let msg="";
+  if (direction==="BUY" && sl >= entry) msg += "⚠️ Pour un BUY, le Stop Loss devrait normalement être sous le prix d'entrée. ";
+  if (direction==="BUY" && tp <= entry) msg += "⚠️ Pour un BUY, le Take Profit devrait normalement être au-dessus du prix d'entrée. ";
+  if (direction==="SELL" && sl <= entry) msg += "⚠️ Pour un SELL, le Stop Loss devrait normalement être au-dessus du prix d'entrée. ";
+  if (direction==="SELL" && tp >= entry) msg += "⚠️ Pour un SELL, le Take Profit devrait normalement être sous le prix d'entrée. ";
+  if (balance > 0 && slLoss > balance) msg += "⚠️ La perte au SL est supérieure à ton solde actuel.";
+  warning.textContent=msg;
+  warning.style.display=msg ? "block" : "none";
+}
+
+document.querySelectorAll(".asset").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".asset").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    asset=btn.dataset.asset;
+    $("assetName").textContent=asset;
+    calculate();
+  });
+});
+
+$("buyBtn").onclick=()=>{
+  direction="BUY"; $("buyBtn").classList.add("buy"); $("sellBtn").classList.remove("buy");
+  calculate();
+};
+$("sellBtn").onclick=()=>{
+  direction="SELL"; $("sellBtn").classList.add("buy"); $("buyBtn").classList.remove("buy");
+  calculate();
+};
+
+["entry","volume","sl","tp","balance"].forEach(id=>$(id).addEventListener("input",calculate));
+calculate();
+</script>
+</body>
+</html>
